@@ -163,10 +163,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends template id and template language" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.template("42")
     |> MailjetHelper.template_language(true)
     |> MailjetAdapter.deliver(@config)
@@ -177,10 +174,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends variables" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_var("foo1", "bar1")
     |> MailjetHelper.put_var("foo2", "bar2")
     |> MailjetAdapter.deliver(@config)
@@ -190,10 +184,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends with custom id" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_custom_id("customId1")
     |> MailjetAdapter.deliver(@config)
 
@@ -202,10 +193,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends with event payload" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_event_payload("customEventPayLoad")
     |> MailjetAdapter.deliver(@config)
 
@@ -227,6 +215,14 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert_receive {:fake_mailjet, %{params: params}}
     refute Map.has_key?(params, "attachments")
+  end
+
+  test "deliver/2 omits subject key if empty" do
+    email = new_email()
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute Map.has_key?(params, "subject")
   end
 
   defp new_email(attrs \\ []) do
