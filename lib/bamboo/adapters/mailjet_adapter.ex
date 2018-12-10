@@ -126,6 +126,7 @@ defmodule Bamboo.MailjetAdapter do
     |> put_custom_id(email)
     |> put_event_payload(email)
     |> put_attachments(email)
+    |> put_reply_to(email)
   end
 
   defp put_from(body, %Email{from: address}) when is_binary(address),
@@ -220,6 +221,12 @@ defmodule Bamboo.MailjetAdapter do
 
     Map.put(body, :attachments, transformed)
   end
+
+  defp put_reply_to(body, %Email{headers: %{"reply-to" => reply_to}}) do
+    Map.put(body, :headers, %{"reply-to": reply_to})
+  end
+
+  defp put_reply_to(body, _), do: body
 
   defp recipients(new_recipients) do
     new_recipients
