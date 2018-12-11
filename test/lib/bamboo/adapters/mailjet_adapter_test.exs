@@ -99,7 +99,6 @@ defmodule Bamboo.MailjetAdapterTest do
         text_body: "TEXT BODY",
         html_body: "HTML BODY"
       )
-      |> Email.put_header("Reply-To", "reply@foo.com")
       |> Email.put_attachment(Path.join(__DIR__, "../../../support/attachment.txt"))
 
     email |> MailjetAdapter.deliver(@config)
@@ -223,6 +222,23 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert_receive {:fake_mailjet, %{params: params}}
     refute Map.has_key?(params, "subject")
+  end
+
+  test "deliver/2 sets reply-to if given" do
+    new_email()
+    |> Email.put_header("reply-to", "Foo Bear <foo@bear.com>")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["headers"] == %{"reply-to" => "Foo Bear <foo@bear.com>"}
+  end
+
+  test "deliver/2 omits reply-to if not given" do
+    new_email()
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute params["headers"]
   end
 
   defp new_email(attrs \\ []) do
