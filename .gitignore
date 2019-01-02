@@ -20,3 +20,7 @@ erl_crash.dump
 # Intellij files
 /.idea
 /bamboomailjet.iml
+
+# VS Code files
+.elixir_ls
+.vscode
