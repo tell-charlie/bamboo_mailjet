@@ -47,28 +47,31 @@ defmodule Bamboo.MailjetAdapter do
 
       Here is the response:
 
-      #{inspect response, limit: :infinity}
+      #{inspect(response, limit: :infinity)}
 
       Here are the params we sent:
 
-      #{inspect params, limit: :infinity}
+      #{inspect(params, limit: :infinity)}
 
       """
+
       %ApiError{message: message}
     end
   end
 
   def deliver(email, config) do
-    api_key = get_key(config,:api_key)
-    api_private_key = get_key(config,:api_private_key)
-    body = email |> to_mailjet_body |> Poison.encode!
+    api_key = get_key(config, :api_key)
+    api_private_key = get_key(config, :api_private_key)
+    body = email |> to_mailjet_body |> Poison.encode!()
     url = [base_uri(), @send_message_path]
 
-    case :hackney.post(url, gen_headers(api_key,api_private_key), body, [:with_body]) do
+    case :hackney.post(url, gen_headers(api_key, api_private_key), body, [:with_body]) do
       {:ok, status, _headers, response} when status > 299 ->
         raise(ApiError, %{params: body, response: response})
+
       {:ok, status, headers, response} ->
         %{status_code: status, headers: headers, body: response}
+
       {:error, reason} ->
         raise(ApiError, %{message: inspect(reason)})
     end
@@ -83,9 +86,9 @@ defmodule Bamboo.MailjetAdapter do
     end
   end
 
-  defp get_key(config,key) do
+  defp get_key(config, key) do
     case Map.get(config, key) do
-      nil -> raise_key_error(config,key)
+      nil -> raise_key_error(config, key)
       key -> key
     end
   end
@@ -96,7 +99,7 @@ defmodule Bamboo.MailjetAdapter do
 
     * Here are the config options that were passed in:
 
-    #{inspect config}
+    #{inspect(config)}
     """
   end
 
@@ -121,9 +124,12 @@ defmodule Bamboo.MailjetAdapter do
     |> put_event_payload(email)
   end
 
-  defp put_from(body, %Email{from: address}) when is_binary(address), do: Map.put(body, :fromemail, address)
+  defp put_from(body, %Email{from: address}) when is_binary(address),
+    do: Map.put(body, :fromemail, address)
+
   defp put_from(body, %Email{from: {name, address}}) when name in [nil, "", ''],
     do: Map.put(body, :fromemail, address)
+
   defp put_from(body, %Email{from: {name, address}}) do
     body
     |> Map.put(:fromemail, address)
@@ -131,21 +137,26 @@ defmodule Bamboo.MailjetAdapter do
   end
 
   defp put_to(body, %Email{to: []}), do: body
+
   defp put_to(body, %Email{to: to}) do
     Map.put(body, :to, to |> addresses)
   end
 
   defp put_cc(body, %Email{cc: []}), do: body
+
   defp put_cc(body, %Email{cc: cc}) do
     Map.put(body, :cc, cc |> addresses)
   end
 
   defp put_bcc(body, %Email{bcc: []}), do: body
+
   defp put_bcc(body, %Email{bcc: bcc}) do
     Map.put(body, :bcc, bcc |> addresses)
   end
 
-  defp put_recipients(body, %{to: [], cc: [], bcc: bcc}), do: Map.put(body, :recipients, bcc |> recipients)
+  defp put_recipients(body, %{to: [], cc: [], bcc: bcc}),
+    do: Map.put(body, :recipients, bcc |> recipients)
+
   defp put_recipients(body, email) do
     body
     |> put_to(email)
@@ -156,47 +167,59 @@ defmodule Bamboo.MailjetAdapter do
   defp put_subject(body, %Email{subject: subject}), do: Map.put(body, :subject, subject)
 
   defp put_html_body(body, %Email{html_body: nil}), do: body
-  defp put_html_body(body, %Email{html_body: html_body}), do: Map.put(body, "html-part", html_body)
+
+  defp put_html_body(body, %Email{html_body: html_body}),
+    do: Map.put(body, "html-part", html_body)
 
   defp put_text_body(body, %Email{text_body: nil}), do: body
-  defp put_text_body(body, %Email{text_body: text_body}), do: Map.put(body, "text-part", text_body)
 
-  defp put_template_id(body, %Email{private: %{mj_templateid: id}}), do: Map.put(body, "mj-templateid", id)
+  defp put_text_body(body, %Email{text_body: text_body}),
+    do: Map.put(body, "text-part", text_body)
+
+  defp put_template_id(body, %Email{private: %{mj_templateid: id}}),
+    do: Map.put(body, "mj-templateid", id)
+
   defp put_template_id(body, _email), do: body
 
-  defp put_template_language(body, %Email{private: %{mj_templatelanguage: active}}), do: Map.put(body, "mj-templatelanguage", active)
+  defp put_template_language(body, %Email{private: %{mj_templatelanguage: active}}),
+    do: Map.put(body, "mj-templatelanguage", active)
+
   defp put_template_language(body, _email), do: body
 
   defp put_vars(body, %Email{private: %{mj_vars: vars}}), do: Map.put(body, "vars", vars)
   defp put_vars(body, _email), do: body
 
-  defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}), do: Map.put(body, "Mj-CustomID", custom_id)
+  defp put_custom_id(body, %Email{private: %{mj_custom_id: custom_id}}),
+    do: Map.put(body, "Mj-CustomID", custom_id)
+
   defp put_custom_id(body, _email), do: body
-  
-  defp put_event_payload(body, %Email{private: %{mj_event_payload: event_payload}}), do: Map.put(body, "Mj-EventPayLoad", event_payload)
+
+  defp put_event_payload(body, %Email{private: %{mj_event_payload: event_payload}}),
+    do: Map.put(body, "Mj-EventPayLoad", event_payload)
+
   defp put_event_payload(body, _email), do: body
 
   defp recipients(new_recipients) do
     new_recipients
-    |> Enum.reduce([], fn(recipient, recipients) ->
+    |> Enum.reduce([], fn recipient, recipients ->
       recipients ++ get_recipient_output(recipient)
     end)
   end
 
   defp get_recipient_output(recipient) when is_binary(recipient), do: [%{email: recipient}]
-  defp get_recipient_output({name, email}) when name in [nil, '',""], do: [%{email: email}]
+  defp get_recipient_output({name, email}) when name in [nil, '', ""], do: [%{email: email}]
   defp get_recipient_output({name, email}), do: [%{name: name, email: email}]
 
   defp addresses(new_addresses) do
     new_addresses
-    |> Enum.reduce([], fn(address, addresses) ->
-        addresses ++ get_address_output(address)
-      end)
+    |> Enum.reduce([], fn address, addresses ->
+      addresses ++ get_address_output(address)
+    end)
     |> Enum.join(",")
   end
 
   defp get_address_output(address) when is_binary(address), do: [address]
-  defp get_address_output({name, email}) when name in [nil, '',""], do: [email]
+  defp get_address_output({name, email}) when name in [nil, '', ""], do: [email]
   defp get_address_output({name, email}), do: [name <> " <" <> email <> ">"]
 
   defp base_uri do
