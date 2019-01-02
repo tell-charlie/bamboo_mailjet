@@ -172,7 +172,8 @@ defmodule Bamboo.MailjetAdapter do
 
   defp put_html_body(body, %Email{html_body: nil}), do: body
 
-  defp put_html_body(body, %Email{html_body: html_body}), do: Map.put(body, "html-part", html_body)
+  defp put_html_body(body, %Email{html_body: html_body}),
+    do: Map.put(body, "html-part", html_body)
 
   defp put_text_body(body, %Email{text_body: nil}), do: body
 

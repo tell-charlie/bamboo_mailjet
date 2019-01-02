@@ -14,7 +14,8 @@ defmodule Bamboo.MailjetAdapterTest do
   defmodule FakeMailjet do
     use Plug.Router
 
-    plug(Plug.Parsers,
+    plug(
+      Plug.Parsers,
       parsers: [:urlencoded, :multipart, :json],
       pass: ["*/*"],
       json_decoder: Poison
@@ -28,7 +29,7 @@ defmodule Bamboo.MailjetAdapterTest do
       Agent.update(__MODULE__, &Map.put(&1, :parent, parent))
       port = get_free_port()
       Application.put_env(:bamboo, :mailjet_base_uri, "http://localhost:#{port}")
-      Plug.Adapters.Cowboy.http(__MODULE__, [], port: port, ref: __MODULE__)
+      Plug.Adapters.Cowboy2.http(__MODULE__, [], port: port, ref: __MODULE__)
     end
 
     defp get_free_port do
@@ -39,7 +40,7 @@ defmodule Bamboo.MailjetAdapterTest do
     end
 
     def shutdown do
-      Plug.Adapters.Cowboy.shutdown(__MODULE__)
+      Plug.Adapters.Cowboy2.shutdown(__MODULE__)
     end
 
     post "/send" do
@@ -112,8 +113,7 @@ defmodule Bamboo.MailjetAdapterTest do
 
     assert Enum.member?(
              headers,
-             {"authorization",
-              "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
+             {"authorization", "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
            )
   end
 
