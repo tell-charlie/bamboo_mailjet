@@ -91,7 +91,7 @@ defmodule Bamboo.MailjetAdapterTest do
     assert request_path == "/send"
   end
 
-  test "deliver/2 sends from, html and text body, subject, and headers" do
+  test "deliver/2 sends from, html and text body, subject, headers and attachment" do
     email =
       new_email(
         from: {"From", "from@foo.com"},
@@ -99,7 +99,7 @@ defmodule Bamboo.MailjetAdapterTest do
         text_body: "TEXT BODY",
         html_body: "HTML BODY"
       )
-      |> Email.put_header("Reply-To", "reply@foo.com")
+      |> Email.put_attachment(Path.join(__DIR__, "../../../support/attachment.txt"))
 
     email |> MailjetAdapter.deliver(@config)
 
@@ -116,6 +116,14 @@ defmodule Bamboo.MailjetAdapterTest do
              {"authorization",
               "Basic " <> Base.encode64("#{@config[:api_key]}:#{@config[:api_private_key]}")}
            )
+
+    assert params["attachments"] == [
+             %{
+               "content-type" => "text/plain",
+               "filename" => "attachment.txt",
+               "content" => "VGVzdCBBdHRhY2htZW50Cg=="
+             }
+           ]
   end
 
   test "deliver/2 correctly formats TO,CC and BCC" do
@@ -154,10 +162,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends template id and template language" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.template("42")
     |> MailjetHelper.template_language(true)
     |> MailjetAdapter.deliver(@config)
@@ -168,10 +173,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends variables" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_var("foo1", "bar1")
     |> MailjetHelper.put_var("foo2", "bar2")
     |> MailjetAdapter.deliver(@config)
@@ -181,10 +183,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends with custom id" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_custom_id("customId1")
     |> MailjetAdapter.deliver(@config)
 
@@ -193,10 +192,7 @@ defmodule Bamboo.MailjetAdapterTest do
   end
 
   test "deliver/2 sends with event payload" do
-    new_email(
-      from: {"From", "from@foo.com"},
-      subject: "My Subject"
-    )
+    new_email()
     |> MailjetHelper.put_event_payload("customEventPayLoad")
     |> MailjetAdapter.deliver(@config)
 
@@ -210,6 +206,39 @@ defmodule Bamboo.MailjetAdapterTest do
     assert_raise Bamboo.MailjetAdapter.ApiError, fn ->
       email |> MailjetAdapter.deliver(@config)
     end
+  end
+
+  test "deliver/2 omits attachments key if no attachments" do
+    email = new_email()
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute Map.has_key?(params, "attachments")
+  end
+
+  test "deliver/2 omits subject key if empty" do
+    email = new_email()
+    email |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute Map.has_key?(params, "subject")
+  end
+
+  test "deliver/2 sets reply-to if given" do
+    new_email()
+    |> Email.put_header("reply-to", "Foo Bear <foo@bear.com>")
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    assert params["headers"] == %{"reply-to" => "Foo Bear <foo@bear.com>"}
+  end
+
+  test "deliver/2 omits reply-to if not given" do
+    new_email()
+    |> MailjetAdapter.deliver(@config)
+
+    assert_receive {:fake_mailjet, %{params: params}}
+    refute params["headers"]
   end
 
   defp new_email(attrs \\ []) do
